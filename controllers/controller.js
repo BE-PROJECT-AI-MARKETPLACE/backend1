@@ -3,8 +3,10 @@ const dotenv = require('dotenv');
 dotenv.config('../.env');
 const fs = require('fs');
 const path = require('path');
+const { Web3 } = require('web3');
+let provider = new Web3.providers.HttpProvider("HTTP://127.0.0.1:7545");
 
-
+let web3 = new Web3(provider);
 
 module.exports.processRequest = async (req, res) => {
     const formData = req.body;
@@ -82,3 +84,24 @@ module.exports.getLogin = (req, res) => {
         res.send({ loggedIn: false });
     }
 }
+
+module.exports.getRequests = async (req, res) => {
+    try {
+        const filePath = path.join(__dirname, '../../blockchain/scripts', 'contract-address.json');
+        const contractAddresses = JSON.parse(fs.readFileSync(filePath));
+        const requestServiceAddress = contractAddresses.RequestServiceAddress;
+        const filePath2 = path.join(__dirname, '../../blockchain/artifacts/contracts/RequestService.sol', 'RequestService.json');
+        const requestServiceContractABI = JSON.parse(fs.readFileSync(filePath2));
+        
+        const contract = new web3.eth.Contract(requestServiceContractABI.abi, requestServiceAddress);
+        const allRequests = await contract.methods.getAllRequests().call();
+        console.log(allRequests);
+        res.json({ status: 200, data: allRequests});
+
+
+    }
+    catch (error) {
+        console.error(error);
+        res.json({status : 500,error:error});
+    }
+};
