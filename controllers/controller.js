@@ -105,3 +105,24 @@ module.exports.getRequests = async (req, res) => {
         res.json({status : 500,error:error});
     }
 };
+
+module.exports.getServices = async (req, res) => {
+    try {
+        const filePath = path.join(__dirname, '../../blockchain/scripts', 'contract-address.json');
+        const contractAddresses = JSON.parse(fs.readFileSync(filePath));
+        const AIServiceAddress = contractAddresses.AIServiceAddress;
+        const filePath2 = path.join(__dirname, '../../blockchain/artifacts/contracts/AIService.sol', 'AIService.json');
+        const AIServiceContractABI = JSON.parse(fs.readFileSync(filePath2));
+
+        const contract = new web3.eth.Contract(AIServiceContractABI.abi, AIServiceAddress);
+        const allServices = await contract.methods.getAllServices().call();
+        console.log(allServices);
+        res.json({ status: 200, data: allServices });
+
+
+    }
+    catch (error) {
+        console.error(error);
+        res.json({ status: 500, error: error });
+    }
+};

@@ -12,6 +12,7 @@ router.get('/getRequestServiceContractABI', controller.getRequestServiceContract
 router.get('/getaiServiceContractABI', controller.getaiServiceContractABI);
 router.get('/login', controller.getLogin);
 router.get('/getRequests', controller.getRequests);
+router.get('/getServices',controller.getServices);
 
 
 module.exports = router;
