@@ -108,7 +108,7 @@ module.exports.getRequests = async (req, res) => {
 
 module.exports.getServices = async (req, res) => {
     try {
-        console.log(req);
+        
         const filePath = path.join(__dirname, '../../blockchain/scripts', 'contract-address.json');
         const contractAddresses = JSON.parse(fs.readFileSync(filePath));
         const AIServiceAddress = contractAddresses.AIServiceAddress;
@@ -151,3 +151,31 @@ module.exports.getIndividualService = async (req, res) => {
         res.json({ status: 500, error: error });
     }
 };
+
+module.exports.getUserDetails = async (req, res) => {
+    try {
+        //get user id from token   
+        const filePath = path.join(__dirname, '../../blockchain/scripts', 'contract-address.json');
+        const contractAddresses = JSON.parse(fs.readFileSync(filePath));
+        const AIServiceAddress = contractAddresses.AIServiceAddress;
+        const filePath2 = path.join(__dirname, '../../blockchain/artifacts/contracts/AIService.sol', 'AIService.json');
+        const AIServiceContractABI = JSON.parse(fs.readFileSync(filePath2));
+
+        const AuthenticationAddress = contractAddresses.AuthenticateAddress;
+        const filePath3 = path.join(__dirname, '../../blockchain/artifacts/contracts/Authentication.sol', 'Authentication.json');
+        const AuthenticationContractABI = JSON.parse(fs.readFileSync(filePath3));
+
+        const { id } = req.body; // Extract the ID from the request body
+        console.log("Received ID:", id);
+        const contract = new web3.eth.Contract(AuthenticationContractABI.abi, AuthenticationAddress);
+        const User = await contract.methods.getUserByID(id).call();
+        console.log(User);
+        res.json({ status: 200, data: User });
+
+
+    }
+    catch (error) {
+        console.error(error);
+        res.json({ status: 500, error: error });
+    }
+}

@@ -14,6 +14,7 @@ router.get('/login', controller.getLogin);
 router.get('/getRequests', controller.getRequests);
 router.get('/getServices', controller.getServices);
 router.get('/getIndividualService/:id', controller.getIndividualService);
+router.get('/getUserDetails',controller.getUserDetails)
 
 
 module.exports = router;
