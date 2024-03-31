@@ -15,18 +15,19 @@ app.use(cookieParser());
 app.use(
     cors({
         origin: ["http://localhost:3000"],
-        methods: ["GET", "POST"],
+        methods: ["GET", "POST","PUT","DELETE"],
         credentials: true,
     })
 );
 app.use(
     session({
         key: "userId",
-        secret: "subscribe",
+        secret: "aimarketplace",
         resave: false,
         saveUninitialized: false,
         cookie: {
-            expires: 60 * 60 * 24,
+            secure : false,
+            expires: 60 * 60 * 24 * 1000 * 3,
         },
     })
 );

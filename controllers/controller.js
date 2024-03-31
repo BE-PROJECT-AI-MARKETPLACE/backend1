@@ -8,9 +8,59 @@ let provider = new Web3.providers.HttpProvider("HTTP://127.0.0.1:7545");
 
 let web3 = new Web3(provider);
 
+
+module.exports.postLogin = async (req, res) => {
+    try {
+        const email = req.body.email;
+        const password = req.body.password;
+        const account = req.body.account;
+
+        const filePath = path.join(__dirname, '../../blockchain/scripts', 'contract-address.json');
+        const contractAddresses = JSON.parse(fs.readFileSync(filePath));
+        const AuthenticationAddress = contractAddresses.AuthenticateAddress;
+        const filePath2 = path.join(__dirname, '../../blockchain/artifacts/contracts/Authentication.sol', 'Authentication.json');
+        const AuthenticationContractABI = JSON.parse(fs.readFileSync(filePath2));
+        const gas = 500000;
+        const contract = new web3.eth.Contract(AuthenticationContractABI.abi, AuthenticationAddress);
+        const message = await contract.methods.login(email, password).call({ from: account, gas });
+        // console.log(message);
+        const user = {
+            email,
+            account
+        };
+        if (message === "Incorrect Credentials") {
+            res.json({status : 400, message : "Invalid credentials"})
+        }
+        else {
+            //make session 
+            req.session.user = user;
+            res.json({ status: 200, message  : "Login Successful" });
+        }
+       
+    }
+    catch (error) {
+        console.error(error);
+        res.json({ status: 500, error: error });
+    }
+}
+
+module.exports.getLogin = async (req, res) => {
+    if (req.session.user) {
+        res.json({ valid: true, user: req.session.user });
+    }
+    else {
+        res.json({ valid: false });
+    }
+}
+
+module.exports.logout = async (req, res) => {
+    res.clearCookie('userId', { path: '/' });
+    res.json({ status: 200, message: "Logout Sucessfull" });    
+}
+
 module.exports.processRequest = async (req, res) => {
     const formData = req.body;
-    console.log(formData);
+    // console.log(formData);
     const email = req.body.email;
     const transporter = nodemailer.createTransport({
         service: "gmail",
@@ -33,30 +83,30 @@ module.exports.processRequest = async (req, res) => {
     };
     transporter.sendMail(mailOptions, function (err, info) {
         if (err) {
-            console.log(err);
+            // console.log(err);
         }
         else {
-            console.log('Mail Sent!!' + info.response);
+            // console.log('Mail Sent!!' + info.response);
         }
     });
     res.json({ success: true, message: 'Form data received successfully' });
 };
 
-module.exports.getContractAddress = (req,res) => {
+module.exports.getContractAddress = (req, res) => {
     const filePath = path.join(__dirname, '../../blockchain/scripts', 'contract-address.json');
     const contractAddresses = JSON.parse(fs.readFileSync(filePath));
     // Now you can use the contract addresses as needed
-    console.log("Authenticate Contract Address:", contractAddresses.AuthenticateAddress);
-    console.log("AIService Contract Address:", contractAddresses.AIServiceAddress);
+    // console.log("Authenticate Contract Address:", contractAddresses.AuthenticateAddress);
+    // console.log("AIService Contract Address:", contractAddresses.AIServiceAddress);
     res.json(contractAddresses);
-    
+
 }
 
 module.exports.getAuthContractABI = (req, res) => {
     const filePath = path.join(__dirname, '../../blockchain/artifacts/contracts/Authentication.sol', 'Authentication.json');
     const contractABI = JSON.parse(fs.readFileSync(filePath));
     // Now you can use the contract addresses as needed
-        res.json(contractABI.abi);
+    res.json(contractABI.abi);
 
 }
 
@@ -76,14 +126,6 @@ module.exports.getaiServiceContractABI = (req, res) => {
 
 }
 
-module.exports.getLogin = (req, res) => {
-    if (req.session.user) {
-        console.log("Hello");
-        res.send({ loggedIn: true, user: req.session.user });
-    } else {
-        res.send({ loggedIn: false });
-    }
-}
 
 module.exports.getRequests = async (req, res) => {
     try {
@@ -92,23 +134,23 @@ module.exports.getRequests = async (req, res) => {
         const requestServiceAddress = contractAddresses.RequestServiceAddress;
         const filePath2 = path.join(__dirname, '../../blockchain/artifacts/contracts/RequestService.sol', 'RequestService.json');
         const requestServiceContractABI = JSON.parse(fs.readFileSync(filePath2));
-        
+
         const contract = new web3.eth.Contract(requestServiceContractABI.abi, requestServiceAddress);
         const allRequests = await contract.methods.getAllRequests().call();
-        console.log(allRequests);
-        res.json({ status: 200, data: allRequests});
+        // console.log(allRequests);
+        res.json({ status: 200, data: allRequests });
 
 
     }
     catch (error) {
         console.error(error);
-        res.json({status : 500,error:error});
+        res.json({ status: 500, error: error });
     }
 };
 
 module.exports.getServices = async (req, res) => {
     try {
-        
+
         const filePath = path.join(__dirname, '../../blockchain/scripts', 'contract-address.json');
         const contractAddresses = JSON.parse(fs.readFileSync(filePath));
         const AIServiceAddress = contractAddresses.AIServiceAddress;
@@ -117,7 +159,7 @@ module.exports.getServices = async (req, res) => {
 
         const contract = new web3.eth.Contract(AIServiceContractABI.abi, AIServiceAddress);
         const allServices = await contract.methods.getAllServices().call();
-        console.log(allServices);
+        // console.log(allServices);
         res.json({ status: 200, data: allServices });
 
 
@@ -138,10 +180,10 @@ module.exports.getIndividualService = async (req, res) => {
         const AIServiceContractABI = JSON.parse(fs.readFileSync(filePath2));
 
         const { id } = req.params; // Extract the ID from the request body
-        console.log("Received ID:", id);
+        // console.log("Received ID:", id);
         const contract = new web3.eth.Contract(AIServiceContractABI.abi, AIServiceAddress);
         const Service = await contract.methods.getService(id).call();
-        console.log(Service);
+        // console.log(Service);
         res.json({ status: 200, data: Service });
 
 
@@ -165,11 +207,11 @@ module.exports.getUserDetails = async (req, res) => {
         const filePath3 = path.join(__dirname, '../../blockchain/artifacts/contracts/Authentication.sol', 'Authentication.json');
         const AuthenticationContractABI = JSON.parse(fs.readFileSync(filePath3));
 
-        const { id } = req.body; // Extract the ID from the request body
-        console.log("Received ID:", id);
+        const { id } = req.params; // Extract the ID from the request body
+        // console.log("Received ID:", id);
         const contract = new web3.eth.Contract(AuthenticationContractABI.abi, AuthenticationAddress);
-        const User = await contract.methods.getUserByID(id).call();
-        console.log(User);
+        const User = await contract.methods.getUserByID(id.toString().trim()).call();
+        // console.log(User);
         res.json({ status: 200, data: User });
 
 
