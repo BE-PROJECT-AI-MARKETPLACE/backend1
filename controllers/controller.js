@@ -5,6 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const { Web3 } = require('web3');
 let provider = new Web3.providers.HttpProvider("HTTP://127.0.0.1:7545");
+const { ethers, JsonRpcProvider, providers, Contract } = require("ethers");
+const { type } = require('os');
 
 let web3 = new Web3(provider);
 
@@ -221,3 +223,48 @@ module.exports.getUserDetails = async (req, res) => {
         res.json({ status: 500, error: error });
     }
 }
+
+
+module.exports.paymentMechanism = async (req, res) => {
+
+    // Load contract addresses and ABIs from files
+    const filePath = path.join(__dirname, '../../blockchain/scripts', 'contract-address.json');
+    const contractAddresses = JSON.parse(fs.readFileSync(filePath));
+    const daiAddress = contractAddresses.daiAddress;
+    const paymentProcessorAddress = contractAddresses.PaymentProcessorAddress;
+
+    // Load contract ABIs from files
+    const filePath2 = path.join(__dirname, '../../blockchain/artifacts/contracts/Dai.sol', 'Dai.json');
+    const daiContractABI = JSON.parse(fs.readFileSync(filePath2));
+
+    const filePath3 = path.join(__dirname, '../../blockchain/artifacts/contracts/PaymentProcessor.sol', 'PaymentProcessor.json');
+    const paymentProcessorContractABI = JSON.parse(fs.readFileSync(filePath3));
+
+    const { amount, paymentID, payer } = req.body;
+    console.log("Payer:", payer, typeof(payer));
+
+    // Connect to the local Ethereum network
+    const provider = new JsonRpcProvider("http://127.0.0.1:7545");
+    const signer = await provider.getSigner();
+    console.log("Signer Address:", signer.address);
+
+    // Create contract instances
+    const daiContract = new web3.eth.Contract(daiContractABI.abi, daiAddress);
+    const paymentProcessorContract = new web3.eth.Contract(paymentProcessorContractABI.abi, paymentProcessorAddress);
+
+
+    // Make payment using Payment Processor contract    
+    try {
+        const approval = await paymentProcessorContract.methods.getApproval(payer, amount, { gasLimit: 500000 }).send({ from: payer }); 
+
+        console.log("Approval ,", approval);
+
+        const payment = await paymentProcessorContract.methods.pay(amount, paymentID, payer).send({from : payer});
+        console.log("Payment successful:", payment);
+
+        return res.status(200).json({ status: 200, message: "Payment Successful" });
+    } catch (error) {
+        console.error("Payment error:", error);
+        return res.status(500).json({ status: 500, message: "Payment Failed" });
+    }
+};

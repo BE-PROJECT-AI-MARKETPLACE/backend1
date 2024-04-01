@@ -17,7 +17,8 @@ router.get('/getaiServiceContractABI', controller.getaiServiceContractABI);
 router.get('/getRequests', controller.getRequests);
 router.get('/getServices', controller.getServices);
 router.get('/getIndividualService/:id', controller.getIndividualService);
-router.get('/getUserDetails/:id',controller.getUserDetails)
+router.get('/getUserDetails/:id', controller.getUserDetails);
+router.post('/pay', controller.paymentMechanism);
 
 
 module.exports = router;
