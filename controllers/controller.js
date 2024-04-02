@@ -209,12 +209,22 @@ module.exports.getUserDetails = async (req, res) => {
         const filePath3 = path.join(__dirname, '../../blockchain/artifacts/contracts/Authentication.sol', 'Authentication.json');
         const AuthenticationContractABI = JSON.parse(fs.readFileSync(filePath3));
 
+        const aiServiceContract = new web3.eth.Contract(AIServiceContractABI.abi, AIServiceAddress);
+
         const { id } = req.params; // Extract the ID from the request body
         // console.log("Received ID:", id);
         const contract = new web3.eth.Contract(AuthenticationContractABI.abi, AuthenticationAddress);
         const User = await contract.methods.getUserByID(id.toString().trim()).call();
-        // console.log(User);
-        res.json({ status: 200, data: User });
+        const userServicesBought = await aiServiceContract.methods.getUserServices().call({
+            from: id.toString().trim(),
+        });
+        const ownerServices = await aiServiceContract.methods.getOwnersServices().call({
+            from: id.toString().trim()
+        });
+        console.log(User);
+        console.log(userServicesBought);
+        console.log(ownerServices);
+        res.json({ status: 200, data: { User,userServicesBought,ownerServices } });
 
 
     }
@@ -226,45 +236,55 @@ module.exports.getUserDetails = async (req, res) => {
 
 
 module.exports.paymentMechanism = async (req, res) => {
-
-    // Load contract addresses and ABIs from files
     const filePath = path.join(__dirname, '../../blockchain/scripts', 'contract-address.json');
     const contractAddresses = JSON.parse(fs.readFileSync(filePath));
-    const daiAddress = contractAddresses.daiAddress;
-    const paymentProcessorAddress = contractAddresses.PaymentProcessorAddress;
+    const PaymentContractAddress = contractAddresses.PaymentContractAddress;
+    const filePath2 = path.join(__dirname, '../../blockchain/artifacts/contracts/PaymentContract.sol', 'PaymentContract.json');
+    const PaymentContractABI = JSON.parse(fs.readFileSync(filePath2));
 
-    // Load contract ABIs from files
-    const filePath2 = path.join(__dirname, '../../blockchain/artifacts/contracts/Dai.sol', 'Dai.json');
-    const daiContractABI = JSON.parse(fs.readFileSync(filePath2));
+    const AIServiceAddress = contractAddresses.AIServiceAddress;
+    const filePath3 = path.join(__dirname, '../../blockchain/artifacts/contracts/AIService.sol', 'AIService.json');
+    const AIServiceContractABI = JSON.parse(fs.readFileSync(filePath3));
 
-    const filePath3 = path.join(__dirname, '../../blockchain/artifacts/contracts/PaymentProcessor.sol', 'PaymentProcessor.json');
-    const paymentProcessorContractABI = JSON.parse(fs.readFileSync(filePath3));
+    const aiServiceContract = new web3.eth.Contract(AIServiceContractABI.abi, AIServiceAddress);
 
-    const { amount, paymentID, payer } = req.body;
-    console.log("Payer:", payer, typeof(payer));
+    //fetching PaymentContract
+    const PaymentContract = new web3.eth.Contract(PaymentContractABI.abi, PaymentContractAddress);
 
-    // Connect to the local Ethereum network
-    const provider = new JsonRpcProvider("http://127.0.0.1:7545");
-    const signer = await provider.getSigner();
-    console.log("Signer Address:", signer.address);
-
-    // Create contract instances
-    const daiContract = new web3.eth.Contract(daiContractABI.abi, daiAddress);
-    const paymentProcessorContract = new web3.eth.Contract(paymentProcessorContractABI.abi, paymentProcessorAddress);
-
-
-    // Make payment using Payment Processor contract    
+    const { amount, payer, service_name } = req.body;
+    console.log("Service Name:", service_name);
+    console.log("Payer:", payer);
+    console.log("Amount", amount);
     try {
-        const approval = await paymentProcessorContract.methods.getApproval(payer, amount, { gasLimit: 500000 }).send({ from: payer }); 
+        const ownerAddress = await aiServiceContract.methods.getOwnerAddress(service_name).call();    
+        await PaymentContract.methods.pay(ownerAddress).send({
+            from: payer,
+            value: web3.utils.toWei(amount, 'ether'),
+            gas : 500000
 
-        console.log("Approval ,", approval);
-
-        const payment = await paymentProcessorContract.methods.pay(amount, paymentID, payer).send({from : payer});
-        console.log("Payment successful:", payment);
-
-        return res.status(200).json({ status: 200, message: "Payment Successful" });
-    } catch (error) {
-        console.error("Payment error:", error);
-        return res.status(500).json({ status: 500, message: "Payment Failed" });
+        });
+        await aiServiceContract.methods.giveUserAccess(service_name).send({
+            from: payer
+        });
+        const hash = await aiServiceContract.methods.getAddressByName(service_name).call({
+            from : payer
+        });
+        res.json({
+            status: 200,
+            message: "Payment Successful",
+            data : hash
+        });
     }
+    catch (err) {
+        res.json({
+            status: 500,
+            message : "Payment Unsuccessful",
+        })
+        console.error(err);
+    }
+
+
+
+
+    // const { }
 };
