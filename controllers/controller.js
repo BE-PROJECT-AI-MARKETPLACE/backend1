@@ -31,14 +31,14 @@ module.exports.postLogin = async (req, res) => {
             account
         };
         if (message === "Incorrect Credentials") {
-            res.json({status : 400, message : "Invalid credentials"})
+            res.json({ status: 400, message: "Invalid credentials" })
         }
         else {
             //make session 
             req.session.user = user;
-            res.json({ status: 200, message  : "Login Successful" });
+            res.json({ status: 200, message: "Login Successful" });
         }
-       
+
     }
     catch (error) {
         console.error(error);
@@ -57,7 +57,7 @@ module.exports.getLogin = async (req, res) => {
 
 module.exports.logout = async (req, res) => {
     res.clearCookie('userId', { path: '/' });
-    res.json({ status: 200, message: "Logout Sucessfull" });    
+    res.json({ status: 200, message: "Logout Sucessfull" });
 }
 
 module.exports.processRequest = async (req, res) => {
@@ -224,7 +224,7 @@ module.exports.getUserDetails = async (req, res) => {
         console.log(User);
         console.log(userServicesBought);
         console.log(ownerServices);
-        res.json({ status: 200, data: { User,userServicesBought,ownerServices } });
+        res.json({ status: 200, data: { User, userServicesBought, ownerServices } });
 
 
     }
@@ -256,29 +256,40 @@ module.exports.paymentMechanism = async (req, res) => {
     console.log("Payer:", payer);
     console.log("Amount", amount);
     try {
-        const ownerAddress = await aiServiceContract.methods.getOwnerAddress(service_name).call();    
+        const ownerAddress = await aiServiceContract.methods.getOwnerAddress(service_name).call();
+        console.log("Owner Address:", ownerAddress);
         await PaymentContract.methods.pay(ownerAddress).send({
             from: payer,
             value: web3.utils.toWei(amount, 'ether'),
-            gas : 500000
+            gas: 500000
 
         });
-        await aiServiceContract.methods.giveUserAccess(service_name).send({
+        const bool = await aiServiceContract.methods.giveUserAccess(service_name).send({
             from: payer
         });
-        const hash = await aiServiceContract.methods.getAddressByName(service_name).call({
-            from : payer
-        });
-        res.json({
-            status: 200,
-            message: "Payment Successful",
-            data : hash
-        });
+        if (bool) {
+            const hash = await aiServiceContract.methods.getAddressByName(service_name).call({
+                from: payer
+            });
+            console.log(hash);
+            res.json({
+                status: 200,
+                message: "Payment Successful",
+                data: hash,
+
+            });
+        } else {
+            res.json({
+                status: 500,
+                message: "Payment Unsuccessful",
+            })
+        }
+
     }
     catch (err) {
         res.json({
             status: 500,
-            message : "Payment Unsuccessful",
+            message: "Payment Unsuccessful",
         })
         console.error(err);
     }
